@@ -1,19 +1,20 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, Input, List, Button, Drawer, Typography, Badge, Select, Divider } from 'antd';
 import { ShoppingOutlined, EyeOutlined, SortAscendingOutlined, SortDescendingOutlined } from '@ant-design/icons';
 import { FaPen } from 'react-icons/fa6';
+import axios from 'axios';
 const { Option } = Select;
 const { Title, Text } = Typography
 
 
 // DUMMY DATA XD s
 
-const productosOriginales = [
-  { id: 1, nombre: "Coca-Cola Lata", stock: 10, dias_vencimiento: 30 },
-  { id: 2, nombre: "Pepsi Botella", stock: 5, dias_vencimiento: 20 },
-  { id: 3, nombre: "Fanta", stock: 3, dias_vencimiento: 25 },
-  { id: 4, nombre: "Sprite", stock: 8, dias_vencimiento: 15 },
-];
+// const productosOriginales = [
+//   { id: 1, nombre: "Coca-Cola Lata", cantidad: 10, dias_vencimiento: 30 },
+//   { id: 2, nombre: "Pepsi Botella", cantidad: 5, dias_vencimiento: 20 },
+//   { id: 3, nombre: "Fanta", cantidad: 3, dias_vencimiento: 25 },
+//   { id: 4, nombre: "Sprite", cantidad: 8, dias_vencimiento: 15 },
+// ];
 
 export function ConsultaProductos() {
 
@@ -21,10 +22,22 @@ export function ConsultaProductos() {
   const [productoSeleccionado, setProductoSeleccionado] = useState(null);
   const [drawerVisible, setDrawerVisible] = useState(false);
 
-  // Stock
-  const getColorStock = (stock) => {
-    if (stock < 5) return 'red';
-    if (stock < 8) return 'orange';
+  const [productosOriginales, setProductosOriginales] = useState([])
+
+  useEffect(() => {
+    axios.get('http://localhost:3000/producto/listado') // cambia si usas proxy
+      .then(response => {
+        setProductosOriginales(response.data);
+      })
+      .catch(error => {
+        console.error('Error al obtener los productos:', error);
+      });
+  }, []);
+
+  // cantidad
+  const getColorcantidad = (cantidad) => {
+    if (cantidad < 5) return 'red';
+    if (cantidad < 8) return 'orange';
     return 'green';
   };
 
@@ -32,7 +45,7 @@ export function ConsultaProductos() {
   const productosFiltrados = productosOriginales
     .filter(p =>
       p.nombre.toLowerCase().includes(filtro.toLowerCase()) ||
-      p.id.toString().includes(filtro)
+      p.id_producto.toString().includes(filtro)
     )
 
   const mostrarDetalles = (producto) => {
@@ -59,21 +72,21 @@ export function ConsultaProductos() {
           <List.Item
             style={{
               backgroundColor: index % 2 === 0 ? '#fafafa' : '#ffffff',
-              borderLeft: `4px solid ${getColorStock(item.stock)}`,
+              borderLeft: `4px solid ${getColorcantidad(item.cantidad)}`,
             }}
             actions={[
               <Button type="link" icon={<EyeOutlined />} onClick={() => mostrarDetalles(item)}>
                 Ver
               </Button>
               ,
-              <Button  href={`editar-producto/${item.id}`} type="link" icon={<FaPen />}>
+              <Button  href={`editar-producto/${item.id_producto}`} type="link" icon={<FaPen />}>
                 Editar
               </Button>
             ]}
           >
             <Badge
-              count={item.stock}
-              style={{ backgroundColor: getColorStock(item.stock), marginRight: 8 }}
+              count={item.cantidad}
+              style={{ backgroundColor: getColorcantidad(item.cantidad), marginRight: 8 }}
             />
             <Text>{item.nombre}</Text>
           </List.Item>
@@ -88,10 +101,10 @@ export function ConsultaProductos() {
       >
         {productoSeleccionado && (
           <>
-            <p><Text strong>ID:</Text> {productoSeleccionado.id}</p>
+            <p><Text strong>ID:</Text> {productoSeleccionado.id_producto}</p>
             <p><Text strong>Nombre:</Text> {productoSeleccionado.nombre}</p>
-            <p><Text strong>Stock:</Text> {productoSeleccionado.stock}</p>
-            <p><Text strong>Días para vencer:</Text> {productoSeleccionado.dias_vencimiento}</p>
+            <p><Text strong>cantidad:</Text> {productoSeleccionado.cantidad}</p>
+            <p><Text strong>Días para vencer:</Text> {productoSeleccionado.fecha_caducidad}</p>
           </>
         )}
       </Drawer>

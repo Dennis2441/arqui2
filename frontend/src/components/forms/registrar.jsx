@@ -1,16 +1,45 @@
 import React from 'react';
-import { Form, Input, Button, Select, DatePicker, Upload, message } from 'antd';
+import { Form, Input, Button, Select, DatePicker, Upload } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
-
+import { useEffect } from 'react';
+import axios from 'axios';
+import dayjs from 'dayjs';
 const { TextArea } = Input;
 const { Option } = Select;
 
-export function FormularioRegistro() {
+export function FormularioRegistro({ id = 0, producto = null }) {
   const [form] = Form.useForm();
 
-  const onFinish = (values) => {
-    console.log('Valores del formulario:', values);
-    message.success('Formulario enviado exitosamente');
+
+  useEffect(() => {
+    if (producto) {
+      console.log(producto)
+      // Convertimos fecha_caducidad a objeto dayjs para que DatePicker lo entienda
+      form.setFieldsValue({
+        ...producto,
+        fecha_caducidad: producto.fecha_caducidad ? dayjs(producto.fecha_caducidad) : null,
+      });
+    }
+  }, [producto, form]);
+
+
+  const onFinish = async (values) => {
+    let url = id != 0 ? '/editar/' + id : '/crear'
+    const res = await axios.post('http://localhost:3000/producto' + url, {
+      nombre: values.nombre,
+      cantidad: 0, // valor por defecto si no viene en el form
+      fecha_caducidad: values.fechaCaducidad, // convertir a YYYY-MM-DD
+      categoria: values.categoria,
+      temperatura_optima: null, // o asigna desde values si está en el formulario
+      lote: '', // o values.lote
+      proveedor: '', // o values.proveedor
+    });
+
+    if (res.status == 200) {
+      alert("Producto Creado")
+    } else {
+      alert("Error al crear el producto")
+    }
   };
 
   const normFile = (e) => {
@@ -47,9 +76,10 @@ export function FormularioRegistro() {
         rules={[{ required: true, message: 'Por favor seleccione una categoría' }]}
       >
         <Select placeholder="Seleccione una categoría">
-          <Option value="categoria1">Categoría 1</Option>
-          <Option value="categoria2">Categoría 2</Option>
-          <Option value="categoria3">Categoría 3</Option>
+          <Option value="alimento">Alimento</Option>
+          <Option value="medicamento">Medicamento</Option>
+          <Option value="laboratorio">Laboratorio</Option>
+          <Option value="otro">Otro</Option>
         </Select>
       </Form.Item>
 
