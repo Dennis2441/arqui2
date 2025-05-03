@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, Button, Input, Typography, message as antdMessage } from 'antd';
 import { AudioOutlined, SoundTwoTone, SoundOutlined } from '@ant-design/icons';
+import axios from 'axios';
 
 const { TextArea } = Input;
 const { Text } = Typography;
@@ -73,151 +74,179 @@ function ChatBox({ closeChat, pacientes, usuario }) {
 
     const lowerText = messageToSend.toLowerCase();
 
-    if (lowerText.includes("dame la lista de pacientes")) {
-      const patientList = pacientes.map(p => `${p.nombre} (Estado: ${p.estado}, SpO2: ${p.SpO2}%)`).join('\n');
-      const response = { sender: 'ArquiRefri', content: `Lista de pacientes:\n${patientList}` };
-      setMessages(prev => [...prev, response]);
-      speak(response.content);
+    // Gestión de saludos
+    if (lowerText.includes("hola")) {
+      const responseMessage = { sender: 'ArquiRefri', content: '¡Hola! ¿En qué puedo ayudarte hoy?' };
+      setMessages(prev => [...prev, responseMessage]);
+      speak(responseMessage.content);
       setIsTyping(false);
       return;
     }
 
-    if (lowerText.includes("dame pacientes criticos")) {
-      const criticos = pacientes.filter(p => p.estado === "Crítico");
-      const list = criticos.length > 0
-        ? criticos.map(p => `${p.nombre} (SpO2: ${p.SpO2}%)`).join('\n')
-        : "No hay pacientes críticos.";
-      const response = { sender: 'ArquiRefri', content: `Pacientes críticos:\n${list}` };
-      setMessages(prev => [...prev, response]);
-      speak(response.content);
+    // Lógica para manejar los comandos sobre los productos
+    if (lowerText.includes("qué hay en la refri")) {
+      try {
+        const response = await axios.get('http://localhost:3000/producto/listado'); // Cambia según tu API
+        const data = response.data;
+        if (data.length > 0) {
+          const productList = data.map(product => `${product.nombre} (Cantidad: ${product.cantidad})`).join('\n');
+          const responseMessage = { sender: 'ArquiRefri', content: `Productos en la refri:\n${productList}` };
+          setMessages(prev => [...prev, responseMessage]);
+          speak(responseMessage.content);
+        } else {
+          const responseMessage = { sender: 'ArquiRefri', content: 'No hay productos en la refri.' };
+          setMessages(prev => [...prev, responseMessage]);
+          speak(responseMessage.content);
+        }
+      } catch (error) {
+        console.error('Error al obtener productos:', error); // Mensajes detallados de error
+        const responseMessage = { sender: 'ArquiRefri', content: 'Hubo un problema al obtener los productos.' };
+        setMessages(prev => [...prev, responseMessage]);
+        speak(responseMessage.content);
+      }
       setIsTyping(false);
       return;
     }
 
-    if (lowerText.includes("dame pacientes estables")) {
-      const estables = pacientes.filter(p => p.estado === "Estable");
-      const list = estables.length > 0
-        ? estables.map(p => `${p.nombre} (SpO2: ${p.SpO2}%)`).join('\n')
-        : "No hay pacientes estables.";
-      const response = { sender: 'ArquiRefri', content: `Pacientes estables:\n${list}` };
-      setMessages(prev => [...prev, response]);
-      speak(response.content);
+    const match = lowerText.match(/cuál es la cantidad del producto (.+)/);
+    if (match) {
+      const nombreProducto = match[1].trim(); // Usa trim para evitar espacios adicionales
+      try {
+        const response = await axios.get('http://localhost:3000/producto/listado'); // Cambia según tu API
+        const data = response.data;
+        const producto = data.find(p => p.nombre.toLowerCase() === nombreProducto.toLowerCase());
+        if (producto) {
+          const responseMessage = { sender: 'ArquiRefri', content: `La cantidad de ${nombreProducto} es ${producto.cantidad}.` };
+          setMessages(prev => [...prev, responseMessage]);
+          speak(responseMessage.content);
+        } else {
+          const responseMessage = { sender: 'ArquiRefri', content: `No se encontró el producto ${nombreProducto}.` };
+          setMessages(prev => [...prev, responseMessage]);
+          speak(responseMessage.content);
+        }
+      } catch (error) {
+        console.error('Error al obtener la cantidad del producto:', error); // Mensajes detallados de error
+        const responseMessage = { sender: 'ArquiRefri', content: 'Hubo un problema al obtener la cantidad del producto.' };
+        setMessages(prev => [...prev, responseMessage]);
+        speak(responseMessage.content);
+      }
       setIsTyping(false);
       return;
     }
 
+    // Consulta a OpenRouter para otras solicitudes
     try {
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
+      const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+        model: 'deepseek/deepseek-prover-v2:free',
+        messages: [
+          { role: 'system', content: 'Responde siempre en español y utiliza un lenguaje natural, sin formato de código o Markdown.' },
+          ...updatedMessages.map(m => ({
+            role: m.sender === 'user' ? 'user' : 'assistant',
+            content: m.content
+          }))
+        ]
+      }, {
         headers: {
-          'Authorization': 'Bearer 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',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'deepseek/deepseek-prover-v2:free',
-          messages: [
-            { role: 'system', content: 'Responde siempre en español y utiliza un lenguaje natural, sin formato de código o Markdown.' }, // Menos repetitiva
-            ...updatedMessages.map(m => ({
-              role: m.sender === 'user' ? 'user' : 'assistant',
-              content: m.content // No agregar frase de respuesta natural aquí
-            }))
-          ]
-        }),
+          'Authorization': 'Bearer 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'
+        }
       });
 
-      if (!response.ok) throw new Error('Error en la solicitud: ' + response.statusText);
-
-      const data = await response.json();
       const botMessage = {
         sender: 'ArquiRefri',
-        content: data.choices?.[0]?.message?.content || 'No se recibió respuesta.',
+        content: response.data.choices?.[0]?.message?.content || 'No se recibió respuesta.',
       };
-      setMessages(prev => [...prev, botMessage]);
-      speak(botMessage.content);
 
-    } catch (error) {
-      console.error(error);
-      setMessages(prev => [...prev, { sender: 'ArquiRefri', content: 'Error: no se pudo obtener respuesta.' }]);
-    } finally {
-      setIsTyping(false);
-    }
-  };
+      // Eliminar formatos de código en la respuesta
+      if (botMessage.content.includes('```')) {  
+        botMessage.content = 'Lo siento, no puedo procesar esa solicitud.';  
+      }  
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  };
+      setMessages(prev => [...prev, botMessage]);  
+      speak(botMessage.content);  
 
-  const startVoiceRecognition = () => {
-    if (!recognitionRef.current) {
-      antdMessage.error('Tu navegador no soporta reconocimiento de voz.');
-      return;
-    }
-    recognitionRef.current.start();
-  };
+    } catch (error) {  
+      console.error('Error desde OpenRouter:', error); // Mensajes detallados de error  
+      setMessages(prev => [...prev, { sender: 'ArquiRefri', content: 'Error: no se pudo obtener respuesta de OpenRouter.' }]);  
+    } finally {  
+      setIsTyping(false);  
+    }  
+  };  
 
-  return (
-    <Card
-      title="Chatbot"
-      style={{ width: "50%" }}
-      extra={
-        <Button type="primary" danger onClick={closeChat}>
-          Cerrar
-        </Button>
-      }
-    >
-      <div
-        style={{
-          flex: 1,
-          overflowY: 'auto',
-          marginBottom: 12,
-          maxHeight: 'calc(100vh - 200px)',
-          paddingRight: 8,
-        }}
-      >
-        {messages.map((msg, index) => (
-          <Card
-            key={index}
-            type="inner"
-            size="small"
-            style={{
-              marginBottom: 8,
-              backgroundColor: msg.sender === 'ArquiRefri' ? '#f0f5ff' : '#e6fffb',
-              textAlign: 'center',
-            }}
-            title={<Text strong>{msg.sender}</Text>}
-          >
-            {msg.content}
-          </Card>
-        ))}
-        {isTyping && (
-          <div style={{ textAlign: 'center', color: 'blue' }}>
-            <Text italic>ArquiRefri está escribiendo...</Text>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
+  const handleKeyDown = (e) => {  
+    if (e.key === 'Enter' && !e.shiftKey) {  
+      e.preventDefault();  
+      sendMessage();  
+    }  
+  };  
 
-      <TextArea
-        rows={2}
-        value={userInput}
-        onChange={e => setUserInput(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder="Escribe tu mensaje (Shift+Enter para nueva línea)"
-        style={{ marginBottom: 8 }}
-      />
+  const startVoiceRecognition = () => {  
+    if (!recognitionRef.current) {  
+      antdMessage.error('Tu navegador no soporta reconocimiento de voz.');  
+      return;  
+    }  
+    recognitionRef.current.start();  
+  };  
 
-      <div style={{ display: 'flex', gap: 8 }}>
-        <Button type="primary" onClick={sendMessage}>Enviar</Button>
-        <Button onClick={startVoiceRecognition} icon={<AudioOutlined />}>Hablar</Button>
-        <Button onClick={() => setIsMuted(prev => !prev)} icon={isMuted ? <SoundOutlined /> : <SoundTwoTone />}>
-          {isMuted ? 'Activar Voz' : 'Mute'}
-        </Button>
-      </div>
-    </Card>
-  );
-}
+  return (  
+    <Card  
+      title="Chatbot"  
+      style={{ width: "50%" }}  
+      extra={  
+        <Button type="primary" danger onClick={closeChat}>  
+          Cerrar  
+        </Button>  
+      }  
+    >  
+      <div  
+        style={{  
+          flex: 1,  
+          overflowY: 'auto',  
+          marginBottom: 12,  
+          maxHeight: 'calc(100vh - 200px)',  
+          paddingRight: 8,  
+        }}  
+      >  
+        {messages.map((msg, index) => (  
+          <Card  
+            key={index}  
+            type="inner"  
+            size="small"  
+            style={{  
+              marginBottom: 8,  
+              backgroundColor: msg.sender === 'ArquiRefri' ? '#f0f5ff' : '#e6fffb',  
+              textAlign: 'center',  
+            }}  
+            title={<Text strong>{msg.sender}</Text>}  
+          >  
+            {msg.content}  
+          </Card>  
+        ))}  
+        {isTyping && (  
+          <div style={{ textAlign: 'center', color: 'blue' }}>  
+            <Text italic>ArquiRefri está escribiendo...</Text>  
+          </div>  
+        )}  
+        <div ref={messagesEndRef} />  
+      </div>  
 
-export default ChatBox;
+      <TextArea  
+        rows={2}  
+        value={userInput}  
+        onChange={e => setUserInput(e.target.value)}  
+        onKeyDown={handleKeyDown}  
+        placeholder="Escribe tu mensaje (Shift+Enter para nueva línea)"  
+        style={{ marginBottom: 8 }}  
+      />  
+
+      <div style={{ display: 'flex', gap: 8 }}>  
+        <Button type="primary" onClick={sendMessage}>Enviar</Button>  
+        <Button onClick={startVoiceRecognition} icon={<AudioOutlined />}>Hablar</Button>  
+        <Button onClick={() => setIsMuted(prev => !prev)} icon={isMuted ? <SoundOutlined /> : <SoundTwoTone />}>  
+          {isMuted ? 'Activar Voz' : 'Mute'}  
+        </Button>  
+      </div>  
+    </Card>  
+  );  
+}  
+
+export default ChatBox;  
