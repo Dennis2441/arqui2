@@ -43,6 +43,9 @@ export function Acceso() {
             <Menu.Item key="configurar" icon={<FaGear  />}>
               <Link to="/configurar">Configuraciones</Link>
             </Menu.Item>
+            <Menu.Item key="refri" icon={<FaGear  />}>
+              <Link to="/refri">Refrigeracion</Link>
+            </Menu.Item>
             {/* Mostrar opción solo si el usuario es 'adm' */}
             {usuario.username === 'adm' && (
               <Menu.Item key="admin" icon={<UserOutlined />}>

@@ -110,16 +110,16 @@ function ChatBox({ closeChat, pacientes, usuario }) {
       const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
-          'Authorization': 'Bearer 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',
+          'Authorization': 'Bearer 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',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'deepseek/deepseek-r1:free',
+          model: 'deepseek/deepseek-prover-v2:free',
           messages: [
-            { role: 'system', content: 'Responde siempre en español.' },
+            { role: 'system', content: 'Responde siempre en español y utiliza un lenguaje natural, sin formato de código o Markdown.' }, // Menos repetitiva
             ...updatedMessages.map(m => ({
               role: m.sender === 'user' ? 'user' : 'assistant',
-              content: m.content
+              content: m.content // No agregar frase de respuesta natural aquí
             }))
           ]
         }),
@@ -161,7 +161,7 @@ function ChatBox({ closeChat, pacientes, usuario }) {
   return (
     <Card
       title="Chatbot"
-      style={{ width: "50%"}}
+      style={{ width: "50%" }}
       extra={
         <Button type="primary" danger onClick={closeChat}>
           Cerrar

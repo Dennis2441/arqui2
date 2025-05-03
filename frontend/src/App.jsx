@@ -6,7 +6,7 @@ import { ConsultaProductos } from "./pages/consultar"
 import { RegistrarProducto } from './pages/registrar-producto';
 import { EditarProducto } from './pages/editar-producto';
 import { Configuracion } from './pages/configuracion';
-
+import{RefrigeradorVirtual} from './pages/refri';
 function App() {
 
   return (
@@ -20,6 +20,7 @@ function App() {
           <Route path="/editar-producto/:id" element={<EditarProducto />} />
           <Route path="/consultar" element={<ConsultaProductos />} />
           <Route path="/configurar" element={<Configuracion />} />
+          <Route path="/refri" element={<RefrigeradorVirtual />} />
         </Route>  
       </Routes>
     </BrowserRouter>
