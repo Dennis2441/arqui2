@@ -1,0 +1,66 @@
+.chatbox-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 20px;
+}
+
+.chatbox-container {
+    padding: 20px;
+    width: 400px;
+    max-height: 600px;
+    background-color: #f7f7f7;
+    border: 1px solid #e1e1e1;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.chatbox-header {
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.message-list {
+    flex-grow: 1;
+    overflow-y: auto;
+    margin-bottom: 10px;
+    background-color: white;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 10px;
+}
+
+.message-item {
+    padding: 5px 10px;
+    display: inline-block;
+    max-width: 80%;
+    word-break: break-word;
+    margin-bottom: 5px;
+    border-radius: 8px;
+}
+
+.user-message {
+    text-align: right;
+    background-color: #e1f7d5;
+    align-self: flex-end;
+}
+
+.bot-message {
+    text-align: left;
+    background-color: #f1f1f1;
+    align-self: flex-start;
+}
+
+.typing-indicator {
+    color: #007bff;
+    font-style: italic;
+    animation: blink 1.2s infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
